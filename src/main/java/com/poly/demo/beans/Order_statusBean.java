@@ -16,11 +16,10 @@ import lombok.NoArgsConstructor;
 @Data
 public class Order_statusBean {
 
-    private Optional<Integer> id = Optional.empty();
+	private Optional<Integer> id = Optional.empty();
 
-    @NotBlank(message = "Tên không được để trống")
-    @Size(max = 100, message = "Tên không được vượt quá 100 ký tự")
+    @NotBlank(message = "Tên trạng thái không được để trống")
     private String name;
-
+    
     private List<OrderEntity> orders;
 }

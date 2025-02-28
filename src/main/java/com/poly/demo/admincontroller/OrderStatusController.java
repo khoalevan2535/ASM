@@ -24,10 +24,10 @@ import jakarta.validation.Valid;
 public class OrderStatusController {
 
     @Autowired
-    Order_StatusJPA orderStatusJPA;
+    private Order_StatusJPA orderStatusJPA;
 
     @Autowired
-    OrderStatusService orderStatusService;
+    private OrderStatusService orderStatusService;
 
     @ModelAttribute("orderStatus")
     public List<Order_statusEntity> getAllOrderStatus() {
@@ -44,42 +44,42 @@ public class OrderStatusController {
                 Order_statusEntity entity = orderStatusOptional.get();
                 orderStatusBean.setId(Optional.ofNullable(entity.getId()));
                 orderStatusBean.setName(entity.getName());
+            } else {
+                model.addAttribute("error", "Không tìm thấy trạng thái đơn hàng với ID: " + id);
             }
         }
 
         model.addAttribute("orderStatusBean", orderStatusBean);
-        return "/admin/OrderStatus";
+        return "admin/OrderStatus";
     }
 
     @PostMapping("/Admin/OrderStatus")
     public String addOrderStatus(@Valid @ModelAttribute("orderStatusBean") Order_statusBean orderStatusBean,
+            Errors errors,
             @RequestParam(value = "id", required = false) Integer idFromForm,
-            Errors errors, Model model, RedirectAttributes redirectAttributes) {
+            Model model, RedirectAttributes redirectAttributes) {
 
+        System.out.println("Bean received: " + orderStatusBean); // Debug dữ liệu gửi lên
         if (errors.hasErrors()) {
+            System.out.println("Validation errors: " + errors);
             model.addAttribute("orderStatusBean", orderStatusBean);
-            return "/admin/OrderStatus";
+            model.addAttribute("error", "Vui lòng kiểm tra dữ liệu nhập vào");
+            return "admin/OrderStatus";
         }
 
         if (idFromForm != null) {
             orderStatusBean.setId(Optional.of(idFromForm));
         }
 
-        String result;
-        if (orderStatusBean.getId().isPresent()) {
-            result = orderStatusService.updateOrder(orderStatusBean);
-            if (result != null) {
-                model.addAttribute("serviceError", result);
-                model.addAttribute("orderStatusBean", orderStatusBean);
-                return "/admin/OrderStatus";
-            }
-        } else {
-            result = orderStatusService.insertOrderStatus(orderStatusBean);
-            if (result != null) {
-                model.addAttribute("serviceError", result);
-                model.addAttribute("orderStatusBean", orderStatusBean);
-                return "/admin/OrderStatus";
-            }
+        String result = orderStatusBean.getId().isPresent()
+                ? orderStatusService.updateOrder(orderStatusBean)
+                : orderStatusService.insertOrderStatus(orderStatusBean);
+
+        if (result != null) {
+            System.out.println("Service error: " + result);
+            model.addAttribute("error", result);
+            model.addAttribute("orderStatusBean", orderStatusBean);
+            return "admin/OrderStatus";
         }
 
         redirectAttributes.addFlashAttribute("success", "Thao tác thành công!");
@@ -89,11 +89,8 @@ public class OrderStatusController {
     @PostMapping("/Admin/OrderStatus/Delete")
     public String deleteOrderStatus(@RequestParam("id") int id, RedirectAttributes redirectAttributes) {
         boolean deleted = orderStatusService.deleteOrderStatus(id);
-        if (!deleted) {
-            redirectAttributes.addFlashAttribute("serviceError", "Không thể xóa trạng thái đơn hàng");
-        } else {
-            redirectAttributes.addFlashAttribute("success", "Xóa thành công!");
-        }
+        redirectAttributes.addFlashAttribute(deleted ? "success" : "serviceError",
+                deleted ? "Xóa thành công!" : "Không thể xóa trạng thái đơn hàng");
         return "redirect:/Admin/OrderStatus";
     }
 }

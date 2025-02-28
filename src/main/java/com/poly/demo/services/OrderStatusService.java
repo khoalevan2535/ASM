@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.poly.demo.beans.Order_statusBean;
 import com.poly.demo.enities.Order_statusEntity;
@@ -15,10 +16,12 @@ public class OrderStatusService {
     @Autowired
     private Order_StatusJPA orderStatusJPA;
 
+    @Transactional
     public String updateOrder(Order_statusBean bean) {
-        Optional<Order_statusEntity> optionalEntity = orderStatusJPA.findById(bean.getId().get());
+        Integer id = bean.getId().orElseThrow(() -> new IllegalArgumentException("ID không được null khi cập nhật"));
+        Optional<Order_statusEntity> optionalEntity = orderStatusJPA.findById(id);
         if (!optionalEntity.isPresent()) {
-            return "Không tìm thấy trạng thái đơn hàng với ID: " + bean.getId().get();
+            return "Không tìm thấy trạng thái đơn hàng với ID: " + id;
         }
 
         Order_statusEntity entity = optionalEntity.get();
@@ -26,42 +29,34 @@ public class OrderStatusService {
             return null; // Không thay đổi
         }
 
-        Optional<Order_statusEntity> existingByName = orderStatusJPA.findByNameAndNotId(bean.getName(), bean.getId().get());
+        Optional<Order_statusEntity> existingByName = orderStatusJPA.findByNameAndNotId(bean.getName(), id);
         if (existingByName.isPresent()) {
             return "Tên trạng thái '" + bean.getName() + "' đã tồn tại.";
         }
 
         entity.setName(bean.getName());
-        try {
-            orderStatusJPA.save(entity);
-            return null; // Thành công
-        } catch (Exception e) {
-            return "Lỗi khi cập nhật: " + e.getMessage();
-        }
+        orderStatusJPA.save(entity);
+        return null; // Thành công
     }
 
+    @Transactional
     public String insertOrderStatus(Order_statusBean bean) {
-        Optional<Order_statusEntity> existingByName = orderStatusJPA.findByName(bean.getName());
-        if (existingByName.isPresent()) {
+        if (orderStatusJPA.findByName(bean.getName()).isPresent()) {
             return "Tên trạng thái '" + bean.getName() + "' đã tồn tại.";
         }
 
         Order_statusEntity entity = new Order_statusEntity();
         entity.setName(bean.getName());
-        try {
-            orderStatusJPA.save(entity); // ID sẽ tự động sinh bởi @GeneratedValue
-            return null;
-        } catch (Exception e) {
-            return "Lỗi khi thêm mới: " + e.getMessage();
-        }
+        orderStatusJPA.save(entity);
+        return null; // Thành công
     }
 
+    @Transactional
     public boolean deleteOrderStatus(int id) {
-        try {
-            orderStatusJPA.deleteById(id);
-            return true;
-        } catch (Exception e) {
+        if (!orderStatusJPA.existsById(id)) {
             return false;
         }
+        orderStatusJPA.deleteById(id);
+        return true;
     }
 }
